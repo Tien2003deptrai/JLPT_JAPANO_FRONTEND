@@ -1,13 +1,14 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { TbRobot, TbX, TbSparkles, TbChartBar, TbTarget } from 'react-icons/tb'
+import axios from 'axios'
+import { TbRobot, TbX, TbChartBar } from 'react-icons/tb'
 
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [analysisResult, setAnalysisResult] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
-  const {   
+  const {
     register,
     handleSubmit,
     reset,
@@ -26,25 +27,21 @@ const ChatBot = () => {
 
   const onSubmit = async (data) => {
     setIsAnalyzing(true)
-    setTimeout(() => {
-      const mockResult = {
-        result: "Bạn cần cải thiện kỹ năng Listening và Vocabulary",
-        plan: [
-          "Dành 2 giờ mỗi ngày để luyện nghe",
-          "Học thêm 20 từ vựng mới mỗi ngày",
-          "Làm bài tập ngữ pháp 30 phút mỗi ngày",
-          "Ôn tập kanji 15 phút mỗi ngày"
-        ],
-        links: [
-          "Listening: https://www.youtube.com/watch?v=example1",
-          "Vocabulary: https://www.youtube.com/watch?v=example2",
-          "Grammar: https://www.youtube.com/watch?v=example3",
-          "Kanji: https://www.youtube.com/watch?v=example4"
-        ]
-      }
-      setAnalysisResult(mockResult)
+    setAnalysisResult(null)
+
+    try {
+      const res = await axios.post("http://localhost:5000/analyze", data)
+      setAnalysisResult(res.data)
+    } catch (error) {
+      console.error("Lỗi khi gọi API:", error)
+      setAnalysisResult({
+        result: "Không thể kết nối đến máy chủ AI.",
+        plan: [],
+        links: []
+      })
+    } finally {
       setIsAnalyzing(false)
-    }, 2000)
+    }
   }
 
   const handleReset = () => {
@@ -70,9 +67,7 @@ const ChatBot = () => {
         className={`w-full px-4 py-3 border rounded-xl text-sm bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors[name] ? 'border-red-400' : 'border-gray-200'
           }`}
       />
-      {errors[name] && (
-        <p className="text-xs text-red-500">{errors[name].message}</p>
-      )}
+      {errors[name] && <p className="text-xs text-red-500">{errors[name].message}</p>}
     </div>
   )
 
@@ -117,7 +112,9 @@ const ChatBot = () => {
                     <TbChartBar className="text-blue-600" size={18} />
                     <span className="font-semibold text-blue-800 text-sm">Đánh giá năng lực</span>
                   </div>
-                  <p className="text-sm text-gray-600">Nhập điểm số của bạn để AI phân tích và đưa ra lộ trình học tập phù hợp</p>
+                  <p className="text-sm text-gray-600">
+                    Nhập điểm số của bạn để AI phân tích và đưa ra lộ trình học tập phù hợp
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -149,40 +146,44 @@ const ChatBot = () => {
                   <p className="text-gray-700">{analysisResult.result}</p>
                 </div>
 
-                <div className="bg-green-100 p-5 rounded-xl border border-green-200">
-                  <h4 className="font-bold text-green-800 mb-3">Kế hoạch học tập</h4>
-                  <ul className="space-y-2">
-                    {analysisResult.plan.map((item, index) => (
-                      <li key={index} className="text-gray-700 text-sm">
-                        {index + 1}. {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="bg-purple-100 p-5 rounded-xl border border-purple-200">
-                  <h4 className="font-bold text-purple-800 mb-3">Tài liệu gợi ý</h4>
-                  <ul className="space-y-2">
-                    {analysisResult.links.map((link, index) => {
-                      const parts = link.split(':')
-                      const label = parts[0]
-                      const url = parts.slice(1).join(':').trim()
-                      return (
-                        <li key={index} className="flex justify-between items-center">
-                          <span className="text-sm text-purple-700">{label}</span>
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-white bg-purple-500 px-3 py-1 rounded-full hover:bg-purple-600"
-                          >
-                            Xem
-                          </a>
+                {analysisResult.plan.length > 0 && (
+                  <div className="bg-green-100 p-5 rounded-xl border border-green-200">
+                    <h4 className="font-bold text-green-800 mb-3">Kế hoạch học tập</h4>
+                    <ul className="space-y-2">
+                      {analysisResult.plan.map((item, index) => (
+                        <li key={index} className="text-gray-700 text-sm">
+                          {index + 1}. {item}
                         </li>
-                      )
-                    })}
-                  </ul>
-                </div>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {analysisResult.links.length > 0 && (
+                  <div className="bg-purple-100 p-5 rounded-xl border border-purple-200">
+                    <h4 className="font-bold text-purple-800 mb-3">Tài liệu gợi ý</h4>
+                    <ul className="space-y-2">
+                      {analysisResult.links.map((link, index) => {
+                        const parts = link.split(':')
+                        const label = parts[0]
+                        const url = parts.slice(1).join(':').trim()
+                        return (
+                          <li key={index} className="flex justify-between items-center">
+                            <span className="text-sm text-purple-700">{label}</span>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-white bg-purple-500 px-3 py-1 rounded-full hover:bg-purple-600"
+                            >
+                              Xem
+                            </a>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                )}
 
                 <div className="flex space-x-3 pt-2">
                   <button onClick={handleReset} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-xl">
